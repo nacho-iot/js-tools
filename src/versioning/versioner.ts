@@ -69,10 +69,28 @@ export class Versioner {
             }
         }
 
-        const what = `Sync ${ansi.bold("package-lock.json")}`;
-        progress?.update(what);
-        await execute("npm", ["install", "--package-lock-only", "--silent"], { cwd: this.#pkg.path });
-        progress?.success(what);
+        // Run the workspace `prepare` rebuild (via npm install) while `dev-types` is still in package.json.
+        const syncWhat = `Sync ${ansi.bold("package-lock.json")}`;
+        progress?.update(syncWhat);
+        const code = await execute("npm", ["install", "--package-lock-only", "--silent"], { cwd: this.#pkg.path });
+        if (code !== 0) {
+            progress?.failure(syncWhat);
+            throw new Error(`npm install --package-lock-only exited with code ${code}`);
+        }
+        progress?.success(syncWhat);
+
+        // Strip `dev-types` from exports — published packages must not advertise it (consumers with
+        // `customConditions: ["dev-types"]` would resolve to `.ts` source under node_modules).
+        for (const node of graph.nodes) {
+            const exports = node.pkg.json.exports;
+            if (exports === undefined || !stripDevTypes(exports)) {
+                continue;
+            }
+            const what = `Strip dev-types from ${ansi.bold(node.pkg.name)}`;
+            progress?.update(what);
+            await node.pkg.save();
+            progress?.success(what);
+        }
     }
 
     async tag() {
@@ -128,10 +146,6 @@ export class Versioner {
             }
         }
 
-        if (json.exports !== undefined && stripDevTypes(json.exports)) {
-            changed = true;
-        }
-
         return changed;
     }
 
@@ -151,8 +165,7 @@ export class Versioner {
     }
 }
 
-// Published packages must not advertise `dev-types`: with `customConditions: ["dev-types"]`, consumers resolve to
-// `.ts` source under node_modules, which TS type-checks (skipLibCheck only skips `.d.ts`).
+// Recursively delete `dev-types` keys from an exports tree.
 function stripDevTypes(node: unknown): boolean {
     if (Array.isArray(node)) {
         let changed = false;

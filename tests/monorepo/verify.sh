@@ -36,14 +36,19 @@ if [ -n "$changed" ]; then
     exit 1
 fi
 
-# nacho-build version --apply must strip `dev-types` from exports so published packages don't expose TS source via
-# customConditions resolution (which would type-check node_modules .ts under skipLibCheck blind spot).
+# `version --apply` must strip dev-types AFTER the workspace `prepare` rebuild.  The prepare script writes
+# DEV_TYPES_PRESENT_DURING_PREPARE iff dev-types was still in packages/a/package.json when it ran.
 grep -q '"dev-types"' packages/a/package.json || {
     echo "expected packages/a/package.json to contain dev-types pre-apply" >&2
     exit 1
 }
+rm -f DEV_TYPES_PRESENT_DURING_PREPARE
 echo "1.2.3" > version.txt
 nacho-build version --apply
+test -f DEV_TYPES_PRESENT_DURING_PREPARE || {
+    echo "ERROR: dev-types was already stripped before the rebuild ran during nacho-build version --apply" >&2
+    exit 1
+}
 if grep -q '"dev-types"' packages/a/package.json; then
     echo "ERROR: nacho-build version --apply did not strip dev-types from packages/a/package.json" >&2
     cat packages/a/package.json >&2

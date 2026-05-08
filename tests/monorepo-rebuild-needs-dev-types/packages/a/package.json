@@ -1,0 +1,16 @@
+{
+    "name": "@nacho-smoke/needs-dev-types-a",
+    "version": "0.0.0",
+    "private": true,
+    "type": "module",
+    "main": "dist/cjs/index.js",
+    "module": "dist/esm/index.js",
+    "types": "dist/esm/index.d.ts",
+    "exports": {
+        ".": {
+            "dev-types": {
+                "types": "./src/index.ts"
+            }
+        }
+    }
+}

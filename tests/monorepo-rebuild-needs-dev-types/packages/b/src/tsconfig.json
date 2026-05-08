@@ -1,0 +1,9 @@
+{
+    "extends": "../../../tsc/tsconfig.lib.json",
+    "compilerOptions": {
+        "types": [],
+        "noEmitOnError": true
+    },
+    "include": ["**/*.ts"],
+    "references": []
+}

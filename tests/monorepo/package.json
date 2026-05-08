@@ -2,5 +2,8 @@
     "name": "nacho-smoke-monorepo",
     "version": "0.0.0",
     "private": true,
-    "workspaces": ["packages/a", "packages/b"]
+    "workspaces": ["packages/a", "packages/b"],
+    "scripts": {
+        "prepare": "node -e \"const fs=require('fs');if(/dev-types/.test(fs.readFileSync('packages/a/package.json','utf8')))fs.writeFileSync('DEV_TYPES_PRESENT_DURING_PREPARE','')\""
+    }
 }

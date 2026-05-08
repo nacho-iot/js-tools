@@ -1,0 +1,9 @@
+{
+    "name": "nacho-smoke-rebuild-fail",
+    "version": "0.0.0",
+    "private": true,
+    "workspaces": ["packages/a"],
+    "scripts": {
+        "prepare": "node -e \"if(require('fs').existsSync('FAIL_REBUILD'))process.exit(1)\""
+    }
+}
