@@ -59,3 +59,25 @@ grep -q '"version": "1.2.3"' packages/a/package.json || {
     cat packages/a/package.json >&2
     exit 1
 }
+
+# --bump derives the next version from version.txt
+for case in "patch 0.5.7 0.5.8" "minor 0.5.7 0.6.0" "major 0.5.7 1.0.0"; do
+    set -- $case
+    kind=$1 from=$2 want=$3
+    echo "$from" > version.txt
+    nacho-build version --bump "$kind" --set
+    got=$(cat version.txt)
+    if [ "$got" != "$want" ]; then
+        echo "ERROR: --bump $kind from $from: expected $want, got $got" >&2
+        exit 1
+    fi
+done
+
+# explicit version overrides --bump
+echo "0.5.7" > version.txt
+nacho-build version 9.9.9 --bump major --set
+got=$(cat version.txt)
+if [ "$got" != "9.9.9" ]; then
+    echo "ERROR: explicit version should override --bump, got $got" >&2
+    exit 1
+fi
