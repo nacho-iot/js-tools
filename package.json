@@ -1,6 +1,6 @@
 {
     "name": "@nacho-iot/js-tools",
-    "version": "0.1.5",
+    "version": "0.1.6",
     "description": "Build, run, and versioning tooling for TypeScript projects and monorepos",
     "type": "module",
     "scripts": {
@@ -72,7 +72,7 @@
     "homepage": "https://github.com/nacho-iot/js-tools#readme",
     "dependencies": {
         "@microsoft/tsdoc": "^0.16.0",
-        "@typescript/native-preview": "^7.0.0-dev.20260503.1",
+        "@typescript/native-preview": "7.0.0-dev.20260505.1",
         "ansi-colors": "^4.1.3",
         "commander": "^14.0.3",
         "detective-typescript": "^14.1.2",
