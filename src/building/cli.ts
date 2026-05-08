@@ -128,6 +128,7 @@ export async function main(argv = process.argv) {
         .option("-s, --set", "set the release version")
         .option("-a, --apply", "set package versions to the release version")
         .option("-t, --tag", "add git tag for release version")
+        .option("-b, --bump <kind>", "increment current version (patch, minor, or major); ignored if [version] is given")
         .action((version: string | undefined, opts: Omit<VersionArgs, "version">) => {
             mode = Mode.Version;
             versionArgs = { ...opts, version };

@@ -8,17 +8,24 @@ import { Package } from "../util/package.js";
 import { Progress } from "../util/progress.js";
 import { Versioner } from "./versioner.js";
 
+export type BumpKind = "patch" | "minor" | "major";
+
 export interface VersionArgs {
     version?: string;
     prefix?: string;
     set?: boolean;
     apply?: boolean;
     tag?: boolean;
+    bump?: BumpKind;
 }
 
 export async function manageVersion(args: VersionArgs) {
     const pkg = new Package({ path: args.prefix });
     const versioner = new Versioner(pkg, args.version);
+
+    if (args.bump !== undefined && args.version === undefined) {
+        versioner.bump(args.bump);
+    }
 
     const progress = new Progress();
 

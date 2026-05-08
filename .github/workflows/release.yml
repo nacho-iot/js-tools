@@ -18,9 +18,18 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Release version (e.g. 0.1.5)'
-        required: true
+        description: 'Explicit release version (leave empty to bump current)'
+        required: false
         type: string
+      bump:
+        description: 'Bump kind (used only if version is empty)'
+        required: false
+        type: choice
+        default: patch
+        options:
+          - patch
+          - minor
+          - major
 
 jobs:
   release:
@@ -55,12 +64,19 @@ jobs:
           git config user.email "${ID}+${NAME}@users.noreply.github.com"
 
       - name: Apply version
-        run: node bin/build.js version "${{ inputs.version }}" --set --apply
+        id: apply
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            node bin/build.js version "${{ inputs.version }}" --set --apply
+          else
+            node bin/build.js version --bump "${{ inputs.bump }}" --set --apply
+          fi
+          echo "version=$(cat version.txt)" >> "$GITHUB_OUTPUT"
 
       - name: Commit
         run: |
           git add -A
-          git commit -m "Release ${{ inputs.version }}"
+          git commit -m "Release ${{ steps.apply.outputs.version }}"
 
       - name: Tag
         run: node bin/build.js version --tag
@@ -68,4 +84,4 @@ jobs:
       - name: Push
         run: |
           git push origin HEAD:main
-          git push origin "v${{ inputs.version }}"
+          git push origin "v${{ steps.apply.outputs.version }}"

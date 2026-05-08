@@ -49,6 +49,28 @@ export class Versioner {
         await writeFile(this.#versionFile, this.#definiteVersion);
     }
 
+    bump(kind: "patch" | "minor" | "major") {
+        const current = this.#definiteVersion;
+        const m = current.match(/^(\d+)\.(\d+)\.(\d+)(?:-.+)?$/);
+        if (!m) {
+            throw new Error(`Cannot bump non-semver version "${current}"`);
+        }
+        const [, maj, min, pat] = m;
+        switch (kind) {
+            case "major":
+                this.#version = `${+maj + 1}.0.0`;
+                break;
+            case "minor":
+                this.#version = `${maj}.${+min + 1}.0`;
+                break;
+            case "patch":
+                this.#version = `${maj}.${min}.${+pat + 1}`;
+                break;
+            default:
+                throw new Error(`Invalid bump kind "${kind}" (must be patch, minor, or major)`);
+        }
+    }
+
     async apply(progress?: Progress) {
         const graph = await Graph.load(this.#pkg);
         this.#members = new Set(graph.nodes.map(node => node.pkg.name));
