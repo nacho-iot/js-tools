@@ -74,7 +74,7 @@
         "@microsoft/tsdoc": "^0.16.0",
         "@typescript/native-preview": "^7.0.0-dev.20260524.1",
         "ansi-colors": "^4.1.3",
-        "commander": "^14.0.3",
+        "commander": "^15.0.0",
         "detective-typescript": "^15.0.0",
         "esbuild": "^0.28.0",
         "minimatch": "^10.2.5",
