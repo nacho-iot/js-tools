@@ -84,7 +84,7 @@
         "typescript": "~6.0.2"
     },
     "optionalDependencies": {
-        "@esbuild/linux-x64": "^0.28.0"
+        "@esbuild/linux-x64": "^0.28.1"
     },
     "devDependencies": {
         "@types/madge": "^5.0.3",
