@@ -72,7 +72,7 @@
     "homepage": "https://github.com/nacho-iot/js-tools#readme",
     "dependencies": {
         "@microsoft/tsdoc": "^0.16.0",
-        "@typescript/native-preview": "^7.0.0-dev.20260621.1",
+        "@typescript/native-preview": "^7.0.0-dev.20260707.2",
         "ansi-colors": "^4.1.3",
         "commander": "^15.0.0",
         "detective-typescript": "^15.0.0",
