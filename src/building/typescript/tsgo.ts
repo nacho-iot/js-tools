@@ -12,8 +12,10 @@ import { Package } from "../../util/package.js";
 import { BuildError } from "../error.js";
 import { TypescriptContext } from "./context.js";
 
+// The native compiler ships as typescript@7, aliased to "typescript7" because node_modules/typescript must remain
+// typescript@6 — typedoc and our own JS-API code require the classic API that 7.x dropped
 function tsgoBin(_workspace: Package) {
-    return Package.tools.findPackage("@typescript/native-preview").resolve("bin/tsgo.js");
+    return Package.tools.findPackage("typescript7").resolve("lib/tsc.js");
 }
 
 export function createTsgoContext(workspace: Package): TypescriptContext {
