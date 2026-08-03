@@ -57,31 +57,48 @@ jobs:
       - name: Configure git identity
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
         run: |
-          NAME="${{ steps.app-token.outputs.app-slug }}[bot]"
+          NAME="${APP_SLUG}[bot]"
           ID=$(gh api "/users/$NAME" --jq .id)
           git config user.name "$NAME"
           git config user.email "${ID}+${NAME}@users.noreply.github.com"
 
       - name: Apply version
         id: apply
+        env:
+          VERSION: ${{ inputs.version }}
+          BUMP: ${{ inputs.bump }}
         run: |
-          if [ -n "${{ inputs.version }}" ]; then
-            node bin/build.js version "${{ inputs.version }}" --set --apply
+          if [ -n "$VERSION" ]; then
+            node bin/build.js version "$VERSION" --set --apply
           else
-            node bin/build.js version --bump "${{ inputs.bump }}" --set --apply
+            node bin/build.js version --bump "$BUMP" --set --apply
           fi
-          echo "version=$(cat version.txt)" >> "$GITHUB_OUTPUT"
+          applied=$(cat version.txt)
+          # Expanded into later `run:` blocks before the shell sees it, so anything outside this set injects a
+          # command or a forged step output
+          case "$applied" in
+              "" | *[!0-9A-Za-z.+-]*)
+                  echo "::error::refusing to release unexpected version '$applied'"
+                  exit 1
+                  ;;
+          esac
+          echo "version=$applied" >> "$GITHUB_OUTPUT"
 
       - name: Commit
+        env:
+          VERSION: ${{ steps.apply.outputs.version }}
         run: |
           git add -A
-          git commit -m "Release ${{ steps.apply.outputs.version }}"
+          git commit -m "Release $VERSION"
 
       - name: Tag
         run: node bin/build.js version --tag
 
       - name: Push
+        env:
+          VERSION: ${{ steps.apply.outputs.version }}
         run: |
           git push origin HEAD:main
-          git push origin "v${{ steps.apply.outputs.version }}"
+          git push origin "v$VERSION"
