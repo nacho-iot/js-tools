@@ -9,7 +9,7 @@
 # Setup required (one-time):
 #   - GitHub App with contents:write installed on this repo
 #   - Org (or repo) secret BOT_APP_PRIVATE_KEY: the App's .pem private key
-#   - Org (or repo) variable BOT_APP_ID: the App's numeric ID
+#   - Org (or repo) secret BOT_APP_ID: the App's numeric ID
 #   - The App listed in the "protect main" ruleset's bypass_actors
 
 name: Release
@@ -39,7 +39,7 @@ jobs:
         id: app-token
         uses: actions/create-github-app-token@v3
         with:
-          app-id: ${{ vars.BOT_APP_ID }}
+          app-id: ${{ secrets.BOT_APP_ID }}
           private-key: ${{ secrets.BOT_APP_PRIVATE_KEY }}
 
       - uses: actions/checkout@v7
