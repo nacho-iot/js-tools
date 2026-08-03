@@ -16,7 +16,7 @@ import {
     ReflectionKind,
     TypeDocOptions,
 } from "typedoc";
-import { isFile } from "../util/file.js";
+import { isFile, posixPath } from "../util/file.js";
 import { Package } from "../util/package.js";
 import { Progress } from "../util/progress.js";
 import { Graph } from "./graph.js";
@@ -45,7 +45,7 @@ export async function buildDocs(pkg: Package, progress: Progress) {
     const entryPoints = Array<string>();
 
     // In a workspace typedoc requires files to be relative to the workspace for merge
-    const basePath = pkg.root.path;
+    const basePath = posixPath(pkg.root.path);
 
     for (const name in modules) {
         const path = modules[name];
@@ -98,7 +98,7 @@ export async function buildDocs(pkg: Package, progress: Progress) {
 function reflectionsPath(pkg: Package) {
     const path = pkg.resolve("build/docs.json");
     if (isFile(path)) {
-        return path;
+        return posixPath(path);
     }
 }
 
@@ -142,7 +142,7 @@ function naiveToRealNamesFor(pkg: Package) {
     const packagePrefix = `${pkg.name}/`;
 
     // In a workspace typedoc requires files to be relative to the workspace for merge
-    const basePath = pkg.root.path;
+    const basePath = posixPath(pkg.root.path);
 
     for (const name in modules) {
         const path = modules[name];
@@ -150,7 +150,7 @@ function naiveToRealNamesFor(pkg: Package) {
             continue;
         }
 
-        const naiveName = relative(basePath, path)
+        const naiveName = posixPath(relative(basePath, path))
             .replace(/.(?:ts|js|mjs|cjs)$/, "")
 
             // typedoc strips "/index"; this is hard-coded and doesn't respect exports

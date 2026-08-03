@@ -8,7 +8,7 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import { readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { dirname, join, relative, resolve } from "node:path";
 import { ignoreError, ignoreErrorSync } from "./errors.js";
-import { isFile, maybeReadJsonSync, maybeStatSync } from "./file.js";
+import { isFile, maybeReadJsonSync, maybeStatSync, posixPath } from "./file.js";
 import { globSync } from "./glob.js";
 import { ImportAliases } from "./import-aliases.js";
 import { Progress } from "./progress.js";
@@ -532,7 +532,9 @@ function findModules(
 }
 
 function addModuleGlobs(source: boolean, target: Record<string, string>, name: string, base: string, pattern: string) {
-    let path = join(base, pattern);
+    // Module paths stay in posix form: they are matched against "/"-separated patterns below and handed to typedoc as
+    // globs, neither of which tolerates a native Windows separator
+    let path = posixPath(join(base, pattern));
     if (source) {
         path = path.replace(/\/dist\/(?:esm|cjs)\//, "/src/");
     }
@@ -553,9 +555,10 @@ function addModuleGlobs(source: boolean, target: Record<string, string>, name: s
         const prefixLength = prefix === undefined ? 0 : prefix.length;
         const suffixLength = suffix === undefined ? 0 : suffix.length;
 
-        for (const thisPath of paths) {
+        for (const globbedPath of paths) {
+            const thisPath = posixPath(globbedPath);
             const qualifier = thisPath.substring(prefixLength, thisPath.length - suffixLength);
-            const thisName = join(name, qualifier);
+            const thisName = posixPath(join(name, qualifier));
             target[thisName] = thisPath;
         }
     } else if (path.includes("*")) {

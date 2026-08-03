@@ -5,7 +5,7 @@
  */
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { resolve } from "node:path";
+import { resolve, sep } from "node:path";
 import { ignoreErrorSync } from "./errors.js";
 
 function isNotFoundError(e: unknown) {
@@ -54,6 +54,14 @@ export function isDirectory(path: string) {
 
 export function isFile(path: string) {
     return !!ignoreErrorSync("ENOENT", () => statSync(path).isFile());
+}
+
+/**
+ * Rewrite a native path in posix form.  Globs read "\" as an escape rather than a separator, and tooling that names
+ * modules after their path uses "/" on every platform.
+ */
+export function posixPath(path: string) {
+    return sep === "\\" ? path.replaceAll("\\", "/") : path;
 }
 
 /**
