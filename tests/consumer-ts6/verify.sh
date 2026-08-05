@@ -25,6 +25,5 @@ do
 done
 
 # A transitive package that binds to the consumer's typescript crashes when its module loads, which happens for every
-# command regardless of what the command does.  Exercise the ones that pull in third-party TypeScript consumers.
+# command regardless of what the command does.  Exercise the one that pulls in the TypeScript API.
 nacho-build cycles >/dev/null
-nacho-build docs >/dev/null

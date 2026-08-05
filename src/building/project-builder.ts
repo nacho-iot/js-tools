@@ -8,9 +8,7 @@ import { Progress } from "../util/progress.js";
 import { BuildError } from "./error.js";
 import { Graph } from "./graph.js";
 import { BuildInformation, Project } from "./project.js";
-import { createTsgoContext, createTypescriptContext } from "./typescript.js";
-import { TypescriptContext } from "./typescript/context.js";
-import { copyDeclarationsToCjs } from "./typescript/tsgo.js";
+import { copyDeclarationsToCjs, createTsgoContext, TypescriptContext } from "./typescript/tsgo.js";
 
 export enum Target {
     clean = "clean",
@@ -23,7 +21,6 @@ export interface Options {
     targets?: Target[];
     clean?: boolean;
     graph?: Graph;
-    tsgo?: boolean;
 }
 
 /**
@@ -35,7 +32,6 @@ export class ProjectBuilder {
     unconditional: boolean;
     tsContext?: TypescriptContext;
     graph?: Graph;
-    tsgo?: boolean;
 
     /**
      * When true, type checking has already been performed by a batched tsgo -b invocation.  {@link #doBuild} skips
@@ -61,7 +57,6 @@ export class ProjectBuilder {
         this.graph = options.graph;
         this.unconditional =
             options.clean || (options.targets !== undefined && options.targets?.indexOf(Target.clean) !== -1);
-        this.tsgo = options.tsgo ?? process.env.NACHO_TSGO !== "0";
     }
 
     get hasClean() {
@@ -182,14 +177,9 @@ export class ProjectBuilder {
                 }
             } else {
                 try {
-                    // Obtain or initialize typescript solution builder
                     let context = this.tsContext;
                     if (context === undefined) {
-                        if (this.tsgo) {
-                            context = createTsgoContext(project.pkg.workspace);
-                        } else {
-                            context = await createTypescriptContext(project.pkg.workspace, graph);
-                        }
+                        context = createTsgoContext(project.pkg.workspace);
                         this.tsContext = context;
                     }
 

@@ -88,12 +88,7 @@ export class Graph {
             return;
         }
 
-        if (builder.tsgo) {
-            await this.#buildWithTsgo(builder);
-        } else {
-            await this.#prebuild(builder);
-            await this.#buildSequential(builder);
-        }
+        await this.#buildWithTsgo(builder);
     }
 
     async #prebuild(builder: ProjectBuilder, progress?: Progress) {
@@ -130,33 +125,6 @@ export class Graph {
         } catch (e) {
             console.error("Terminating due to prebuild error:", e);
             process.exit(1);
-        }
-    }
-
-    async #buildSequential(builder: ProjectBuilder) {
-        const toBuild = new Set(this.nodes);
-
-        while (toBuild.size) {
-            let node;
-
-            nodes: for (node of toBuild) {
-                for (const dep of node.dependencies) {
-                    if (dep.isDirty) {
-                        continue nodes;
-                    }
-                }
-                break;
-            }
-
-            if (!node) {
-                throw new Error("Internal logic error: No unbuilt project has fully built dependencies");
-            }
-            if (node.isDirty || builder.unconditional) {
-                await builder.build(node.project);
-                node.info.timestamp = new Date().toISOString();
-            }
-
-            toBuild.delete(node);
         }
     }
 

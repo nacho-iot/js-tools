@@ -4,10 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { API } from "typescript/unstable/sync";
 import { commander } from "../util/commander.js";
 import { Package } from "../util/package.js";
 import { reportCycles } from "./cycles.js";
-import { buildDocs, mergeDocs } from "./docs.js";
 import { Graph } from "./graph.js";
 import { ProjectBuilder, Target } from "./project-builder.js";
 import { Project } from "./project.js";
@@ -21,7 +21,6 @@ enum Mode {
     BuildWorkspace,
     DisplayGraph,
     Configure,
-    BuildDocs,
     Relock,
     SyncTsconfigs,
     Circular,
@@ -42,8 +41,7 @@ export async function main(argv = process.argv) {
     const program = commander("nacho-build", "Builds TypeScript packages and monorepos.")
         .option("-p, --prefix <path>", "specify build directory", ".")
         .option("-c, --clean", "clean before build", false)
-        .option("-d, --dependencies", "build dependencies", false)
-        .option("--tsc", "use tsc instead of tsgo for type checking");
+        .option("-d, --dependencies", "build dependencies", false);
 
     program
         .command("build")
@@ -93,13 +91,6 @@ export async function main(argv = process.argv) {
         });
 
     program
-        .command("docs")
-        .description("build workspace documentation")
-        .action(() => {
-            mode = Mode.BuildDocs;
-        });
-
-    program
         .command("configure")
         .description("refresh tsconfig templates and sync all tsconfigs")
         .action(() => {
@@ -144,8 +135,7 @@ export async function main(argv = process.argv) {
     }
 
     function builder(graph?: Graph) {
-        const { tsc, ...rest } = args as Args & { tsc?: boolean };
-        return new ProjectBuilder({ ...rest, tsgo: tsc ? false : undefined, targets: [...targets], graph });
+        return new ProjectBuilder({ ...args, targets: [...targets], graph });
     }
 
     switch (mode as Mode) {
@@ -203,33 +193,22 @@ export async function main(argv = process.argv) {
             });
             break;
 
-        case Mode.BuildDocs: {
-            using progress = pkg.start("Documenting");
-            if (pkg.isWorkspace) {
-                const graph = await Graph.load();
-                for (const node of graph.nodes) {
-                    if (node.pkg.isLibrary) {
-                        await progress.run(node.pkg.name, () => buildDocs(node.pkg, progress));
-                    }
-                }
-                await mergeDocs(Package.workspace);
-            } else {
-                await progress.run(pkg.name, () => buildDocs(pkg, progress));
-            }
-            break;
-        }
-
         case Mode.Circular: {
             using progress = pkg.start("Analyzing dependencies");
-            if (pkg.isWorkspace) {
-                const graph = await Graph.load();
-                for (const node of graph.nodes) {
-                    if (node.pkg.isLibrary) {
-                        await reportCycles(node.pkg, progress);
+            const api = new API();
+            try {
+                if (pkg.isWorkspace) {
+                    const graph = await Graph.load();
+                    for (const node of graph.nodes) {
+                        if (node.pkg.isLibrary) {
+                            await reportCycles(node.pkg, progress, api);
+                        }
                     }
+                } else {
+                    await reportCycles(pkg, progress, api);
                 }
-            } else {
-                await reportCycles(pkg, progress);
+            } finally {
+                api.close();
             }
             break;
         }

@@ -6,16 +6,13 @@
 
 const MAX_CYCLES = 1000;
 
-import { readFile } from "node:fs/promises";
 import { Package } from "../util/package.js";
 import { Progress } from "../util/progress.js";
 
 import { dirname, relative, resolve } from "node:path";
 import {
-    createSourceFile,
     ExportDeclaration,
     Expression,
-    forEachChild,
     ImportDeclaration,
     isExportDeclaration,
     isExternalModuleReference,
@@ -25,26 +22,39 @@ import {
     isNamedImports,
     isStringLiteral,
     Node,
-    ScriptKind,
-    ScriptTarget,
-    SyntaxKind,
-} from "typescript";
+    SourceFile,
+} from "typescript/unstable/ast";
+import { API } from "typescript/unstable/sync";
 import { std } from "../ansi-text/std.js";
 import { ansi } from "../ansi-text/text-builder.js";
+import { BuildError } from "./error.js";
 
-export async function reportCycles(pkg: Package, progress: Progress) {
-    const cycles = await progress.run(pkg.name, () => identifyCycles(pkg, progress));
+export async function reportCycles(pkg: Package, progress: Progress, api: API) {
+    const cycles = await progress.run(pkg.name, () => identifyCycles(pkg, progress, api));
     if (cycles) {
         printCycles(pkg, cycles);
     }
 }
 
-async function identifyCycles(pkg: Package, progress: Progress) {
+async function identifyCycles(pkg: Package, progress: Progress, api: API) {
+    const files = await pkg.glob("{src,test}/**/*.ts");
+
     const deps = {} as Record<string, string[]>;
-    for (const filename of await pkg.glob("{src,test}/**/*.ts")) {
-        const contents = await readFile(filename, "utf-8");
-        deps[filename] = resolveDeps(pkg, filename, importsOf(filename, contents));
+    {
+        using snapshot = api.updateSnapshot({ openFiles: files });
+        for (const filename of files) {
+            progress.refresh();
+            const source = snapshot.getDefaultProjectForFile(filename)?.program.getSourceFile(filename);
+            if (source === undefined) {
+                throw new BuildError(`Cannot parse ${filename} for cycle analysis`);
+            }
+            deps[filename] = resolveDeps(pkg, filename, importsOf(source));
+        }
     }
+
+    // Opens are ref-counted server-side; without this the shared server accumulates every package's program for the
+    // life of the run
+    api.updateSnapshot({ closeFiles: files }).dispose();
 
     const cycles = [] as string[][];
     for (const filename in deps) {
@@ -112,11 +122,10 @@ function printCycles(pkg: Package, cycles: string[][]) {
 }
 
 /**
- * Extract the module specifiers a file depends on at runtime.  Type-only and dynamic imports are excluded because
- * neither creates a load-time edge, so neither can form a cycle.
+ * Extract the module specifiers a file depends on at load time.  Type-only, deferred, dynamic and fully-elided
+ * imports are excluded because none of them creates a load-time edge, so none can form a cycle.
  */
-function importsOf(filename: string, contents: string) {
-    const source = createSourceFile(filename, contents, ScriptTarget.Latest, false, ScriptKind.TS);
+function importsOf(source: SourceFile) {
     const specifiers = Array<string>();
 
     function addSpecifier(node?: Expression) {
@@ -127,57 +136,65 @@ function importsOf(filename: string, contents: string) {
 
     function visit(node: Node) {
         if (isImportDeclaration(node)) {
-            if (!isTypeOnlyImport(node)) {
+            if (importsAtLoadTime(node)) {
                 addSpecifier(node.moduleSpecifier);
             }
         } else if (isExportDeclaration(node)) {
-            if (!isTypeOnlyExport(node)) {
+            if (exportsAtLoadTime(node)) {
                 addSpecifier(node.moduleSpecifier);
             }
-        } else if (isImportEqualsDeclaration(node) && isExternalModuleReference(node.moduleReference)) {
+        } else if (
+            isImportEqualsDeclaration(node) &&
+            !node.isTypeOnly &&
+            isExternalModuleReference(node.moduleReference)
+        ) {
             addSpecifier(node.moduleReference.expression);
         }
 
-        forEachChild(node, visit);
+        node.forEachChild(visit);
     }
 
-    forEachChild(source, visit);
+    source.forEachChild(visit);
 
     return specifiers;
 }
 
-function isTypeOnlyImport(node: ImportDeclaration) {
+function importsAtLoadTime(node: ImportDeclaration) {
     const clause = node.importClause;
     if (clause === undefined) {
-        return false;
-    }
-    if (clause.phaseModifier === SyntaxKind.TypeKeyword) {
+        // Bare `import "x"` exists only for its side effects
         return true;
     }
-    if (clause.name !== undefined) {
+
+    // `import type` is erased and `import defer` evaluates lazily like `import()`
+    if (clause.phaseModifier !== undefined) {
         return false;
+    }
+
+    if (clause.name !== undefined) {
+        return true;
     }
 
     const bindings = clause.namedBindings;
     if (bindings === undefined || !isNamedImports(bindings)) {
-        return false;
+        return true;
     }
 
-    // An empty binding list still loads the module, and `every` is vacuously true for it
-    return bindings.elements.length > 0 && bindings.elements.every(element => element.isTypeOnly);
+    // esbuild erases empty and all-type binding lists alike, so neither is a load-time edge
+    return !bindings.elements.every(element => element.isTypeOnly);
 }
 
-function isTypeOnlyExport(node: ExportDeclaration) {
+function exportsAtLoadTime(node: ExportDeclaration) {
     if (node.isTypeOnly) {
-        return true;
+        return false;
     }
 
     const clause = node.exportClause;
     if (clause === undefined || !isNamedExports(clause)) {
-        return false;
+        return true;
     }
 
-    return clause.elements.length > 0 && clause.elements.every(element => element.isTypeOnly);
+    return !clause.elements.every(element => element.isTypeOnly);
 }
 
 function resolveDeps(pkg: Package, sourceFilename: string, deps: string[]) {
