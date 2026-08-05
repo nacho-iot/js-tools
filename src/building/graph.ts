@@ -151,7 +151,11 @@ export class Graph {
         progress.update("Type check");
         let result: TsgoResult;
         try {
-            result = await tsgoSolutionBuild(workspace, tsconfigPath);
+            result = await tsgoSolutionBuild(
+                workspace,
+                tsconfigPath,
+                this.nodes.map(node => node.pkg.path),
+            );
         } catch (e) {
             progress.failure("Type check");
             throw e;

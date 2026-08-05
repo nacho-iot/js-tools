@@ -6,7 +6,7 @@
 
 import { spawn } from "node:child_process";
 import { cp } from "node:fs/promises";
-import { join, resolve } from "path";
+import { join, resolve, sep } from "path";
 import { isDirectory } from "../../util/file.js";
 import { Package } from "../../util/package.js";
 import { BuildError } from "../error.js";
@@ -98,13 +98,16 @@ export interface TsgoResult {
 /**
  * Run tsgo in solution build mode (-b) for the entire workspace or a scoped set of packages.
  *
- * Captures diagnostics and maps them to packages by file path. Does not throw on type errors — the caller decides how
- * to handle failures.
+ * Captures diagnostics and maps them to the packages in {@link packagePaths} by file path. Does not throw on type
+ * errors — the caller decides how to handle failures.
  */
-export async function tsgoSolutionBuild(workspace: Package, tsconfigPath: string): Promise<TsgoResult> {
+export async function tsgoSolutionBuild(
+    workspace: Package,
+    tsconfigPath: string,
+    packagePaths: string[],
+): Promise<TsgoResult> {
     const bin = tsgoBin(workspace);
     const args = [bin, "-b", tsconfigPath];
-    const workspacePath = workspace.path;
 
     // tsgo sends diagnostics to stdout
     const { code, stdout } = await new Promise<{ code: number; stdout: string }>((resolve, reject) => {
@@ -141,21 +144,17 @@ export async function tsgoSolutionBuild(workspace: Package, tsconfigPath: string
             }
 
             const filePath = resolve(match[1]);
-            const relative = filePath.startsWith(workspacePath + "/")
-                ? filePath.slice(workspacePath.length + 1)
-                : undefined;
 
-            if (relative === undefined) {
+            // Packages may nest, so the longest matching path wins
+            let pkgPath: string | undefined;
+            for (const path of packagePaths) {
+                if (filePath.startsWith(path + sep) && (pkgPath === undefined || path.length > pkgPath.length)) {
+                    pkgPath = path;
+                }
+            }
+            if (pkgPath === undefined) {
                 continue;
             }
-
-            // Extract the package directory — e.g. "packages/protocol/src/foo.ts" → "packages/protocol"
-            const parts = relative.split("/");
-            if (parts.length < 3) {
-                continue;
-            }
-            const pkgDir = `${parts[0]}/${parts[1]}`;
-            const pkgPath = join(workspacePath, pkgDir);
 
             const existing = errorsByPackage.get(pkgPath);
             errorsByPackage.set(pkgPath, existing ? `${existing}\n${line}` : line);
