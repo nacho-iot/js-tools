@@ -213,7 +213,6 @@ export class Graph {
 
         for (const node of dirtyNodes) {
             await builder.build(node.project, progress);
-            node.info.timestamp = new Date().toISOString();
         }
 
         await progress.run("Transpile", () => builder.flushWork());

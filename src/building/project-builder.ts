@@ -46,11 +46,25 @@ export class ProjectBuilder {
     #work = Array<() => Promise<void>>();
 
     /**
+     * Build info for packages whose enqueued work has not run yet.  Persisting it before {@link flushWork} succeeds
+     * would mark a package as built even when its transpile step then fails, so the next build would skip it.
+     */
+    #pendingInfo = Array<{ project: Project; info: BuildInformation; node?: Graph.Node }>();
+
+    /**
      * Execute all enqueued work with a concurrency limit and clear the queue.
      */
     async flushWork() {
         await parallel(this.#work);
         this.#work = [];
+
+        for (const { project, info, node } of this.#pendingInfo) {
+            await project.recordBuildInfo(info);
+            if (node) {
+                node.info = info;
+            }
+        }
+        this.#pendingInfo = [];
     }
 
     constructor(private options: Options = {}) {
@@ -240,9 +254,13 @@ export class ProjectBuilder {
 
         // Only update build information when there are no explicit targets so we know it's a full build
         if (!this.options.targets?.length) {
-            await project.recordBuildInfo(info);
-            if (node) {
-                node.info = info;
+            if (this.typesPrebuilt) {
+                this.#pendingInfo.push({ project, info, node });
+            } else {
+                await project.recordBuildInfo(info);
+                if (node) {
+                    node.info = info;
+                }
             }
         }
     }
