@@ -1,6 +1,6 @@
 {
     "name": "@nacho-iot/js-tools",
-    "version": "0.1.7",
+    "version": "0.2.0",
     "description": "Build, run, and versioning tooling for TypeScript projects and monorepos",
     "type": "module",
     "scripts": {
@@ -38,9 +38,6 @@
             }
         },
         "./ansi-text": {
-            "dev-types": {
-                "types": "./src/ansi-text/index.ts"
-            },
             "import": {
                 "types": "./dist/esm/ansi-text/index.d.ts",
                 "default": "./dist/esm/ansi-text/index.js"
