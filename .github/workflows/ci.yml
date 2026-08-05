@@ -29,7 +29,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
 
@@ -57,7 +57,7 @@ jobs:
       # Node 24 ships with npm 11.x, which is required for OIDC-based trusted
       # publishing.  (The node version used by the build lives in the Dockerfile
       # and is independent of this.)
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org
