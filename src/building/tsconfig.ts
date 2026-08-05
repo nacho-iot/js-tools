@@ -6,6 +6,7 @@
 
 import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { relative, resolve } from "node:path";
+import { posixPath } from "../util/file.js";
 import { Package } from "../util/package.js";
 import { Graph } from "./graph.js";
 
@@ -54,7 +55,7 @@ export async function syncAllTsconfigs(graph: Graph, force = false) {
     for (const node of graph.nodes) {
         await syncPackageTsconfigs(graph, node, force);
         rootTsconfig.references.push({
-            path: workspace.relative(node.pkg.path).replace(/\\/g, "/"),
+            path: posixPath(workspace.relative(node.pkg.path)),
         });
     }
 
@@ -108,7 +109,7 @@ async function syncSubproject(
 
     // Only rewrite extends when forced (configure command); otherwise preserve user edits
     if (force) {
-        tsconfig.extends = relative(path, workspace.resolve(TEMPLATE_DIR, baseConfig)).replace(/\\/g, "/");
+        tsconfig.extends = posixPath(relative(path, workspace.resolve(TEMPLATE_DIR, baseConfig)));
     }
 
     const deps = node.dependencies.filter(dep => dep.pkg.isLibrary).map(dep => dep.pkg.resolve("src"));
@@ -116,7 +117,7 @@ async function syncSubproject(
     const desired = [...new Set([...deps, ...extraRefs])];
 
     const newReferences = desired
-        .map(ref => ({ path: relative(path, ref).replace(/\\/g, "/") }))
+        .map(ref => ({ path: posixPath(relative(path, ref)) }))
         .sort((ref1, ref2) => ref1.path.localeCompare(ref2.path));
 
     tsconfig.references = newReferences;

@@ -120,9 +120,9 @@ export class Package {
     async glob(pattern: string | string[]) {
         // Glob only understands forward-slash as separator because reasons
         if (typeof pattern === "string") {
-            pattern = this.resolve(pattern).replace(/\\/g, "/");
+            pattern = posixPath(this.resolve(pattern));
         } else {
-            pattern = pattern.map(s => this.resolve(s).replace(/\\/g, "/"));
+            pattern = pattern.map(s => posixPath(this.resolve(s)));
         }
 
         // Current glob implementation isn't actually async as this is faster and we only walk small directory trees
@@ -532,8 +532,8 @@ function findModules(
 }
 
 function addModuleGlobs(source: boolean, target: Record<string, string>, name: string, base: string, pattern: string) {
-    // Module paths stay in posix form: they are matched against "/"-separated patterns below and handed to typedoc as
-    // globs, neither of which tolerates a native Windows separator
+    // Module paths stay in posix form: they are matched against "/"-separated patterns below and consumed as globs,
+    // neither of which tolerates a native Windows separator
     let path = posixPath(join(base, pattern));
     if (source) {
         path = path.replace(/\/dist\/(?:esm|cjs)\//, "/src/");

@@ -5,7 +5,7 @@
  */
 
 import { GLOBSTAR, Minimatch, ParseReturnFiltered } from "minimatch";
-import { FilesystemSync } from "./file.js";
+import { FilesystemSync, posixPath } from "./file.js";
 
 export class GlobError extends Error {}
 
@@ -24,7 +24,7 @@ export function globSync(pattern: string | string[], fs = FilesystemSync()) {
 
 function globOneSync(pattern: string, fs: FilesystemSync) {
     // Parse the glob
-    const mm = new Minimatch(pattern.replace(/\\/g, "/"), {});
+    const mm = new Minimatch(posixPath(pattern), {});
     const results = new Set<string>();
     for (const part of mm.set) {
         for (const path of globOnePartSync(mm, part, fs)) {

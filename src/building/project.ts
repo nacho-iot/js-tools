@@ -9,6 +9,7 @@ import { cp, mkdir, rm, symlink, writeFile } from "node:fs/promises";
 import { platform } from "node:os";
 import { dirname, join } from "node:path";
 import { ignoreError } from "../util/errors.js";
+import { posixPath } from "../util/file.js";
 import { CONFIG_PATH, Package } from "../util/package.js";
 
 export const BUILD_INFO_LOCATION = "build/info.json";
@@ -192,7 +193,7 @@ export class Project {
 
     async #targetsOf(indir: string, outdir: string, ...extensions: string[]) {
         const inputPrefixLength = this.pkg.resolve(indir).length + 1;
-        outdir = this.pkg.resolve(outdir).replace(/\\/g, "/");
+        outdir = posixPath(this.pkg.resolve(outdir));
 
         return (await this.pkg.glob(extensions.map(ext => `${indir}/**/*.${ext}`))).map(file => ({
             in: file,
