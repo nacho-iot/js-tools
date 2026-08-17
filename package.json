@@ -76,7 +76,7 @@
         "typescript": "~7.0.2"
     },
     "optionalDependencies": {
-        "@esbuild/linux-x64": "^0.28.1"
+        "@esbuild/linux-x64": "^0.28.2"
     },
     "devDependencies": {
         "@types/node": "^26.1.2"
