@@ -72,7 +72,7 @@
         "commander": "^15.0.0",
         "esbuild": "^0.28.1",
         "minimatch": "^10.2.6",
-        "type-fest": "^5.8.0",
+        "type-fest": "^5.9.0",
         "typescript": "~7.0.2"
     },
     "optionalDependencies": {
